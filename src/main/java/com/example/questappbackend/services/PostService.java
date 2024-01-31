@@ -5,7 +5,10 @@ import com.example.questappbackend.entities.User;
 import com.example.questappbackend.repos.PostRepository;
 import com.example.questappbackend.requests.PostCreateRequest;
 import com.example.questappbackend.requests.PostUpdateRequest;
+import com.example.questappbackend.responses.LikeResponse;
 import com.example.questappbackend.responses.PostResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,12 +17,15 @@ import java.util.stream.Collectors;
 
 @Service
 public class PostService {
-    private PostRepository postRepository;
-    private UserService userService;
+    private final PostRepository postRepository;
+    private final LikeService likeService;
+    private final UserService userService;
 
-    public PostService(PostRepository postRepository, UserService userService) {
+    @Autowired
+    public PostService(PostRepository postRepository, UserService userService, @Lazy LikeService likeService) {
         this.postRepository = postRepository;
         this.userService = userService;
+        this.likeService = likeService;
     }
 
     public List<PostResponse> getAllPosts(Optional<Long> userId) {
@@ -29,7 +35,10 @@ public class PostService {
         } else {
             list = postRepository.findAll();
         }
-        return list.stream().map(p  -> new PostResponse(p)).collect(Collectors.toList());
+        return list.stream().map(p  -> {
+            List<LikeResponse> likes = likeService.getAllLikesWithParam(Optional.empty(), Optional.ofNullable(p.getId()));
+            return new PostResponse(p, likes);
+        }).collect(Collectors.toList());
     }
 
     public Post getOnePostById(Long postId) {
